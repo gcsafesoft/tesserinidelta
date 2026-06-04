@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestione Tesserini – Delta Impianti</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Source+Sans+3:wght@300;400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+:root{--navy:#1a2a4a;--steel:#2e4070;--copper:#c0622a;--light:#f5f7fa;--card-w:85.6mm;--card-h:54mm;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{min-height:100vh;background:linear-gradient(135deg,#0d1b2e 0%,#1a2a4a 50%,#0d1b2e 100%);font-family:'Source Sans 3',sans-serif;color:#222;}
+
+/* LOGIN */
+#loginScreen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:20px;}
+.login-box{background:#fff;border-radius:22px;padding:48px 44px 40px;width:100%;max-width:400px;box-shadow:0 32px 80px rgba(0,0,0,.5);text-align:center;}
+.login-box img.login-logo{height:60px;margin-bottom:20px;}
+.login-box h1{font-family:'Playfair Display',serif;color:var(--navy);font-size:1.5rem;margin-bottom:6px;}
+.login-box p.sub{color:#888;font-size:.82rem;margin-bottom:30px;letter-spacing:.05em;text-transform:uppercase;}
+.login-field{margin-bottom:16px;text-align:left;}
+.login-field label{display:block;font-size:.72rem;font-weight:700;color:var(--steel);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;}
+.login-field input{width:100%;border:1.5px solid #d8dde6;border-radius:10px;padding:12px 16px;font-size:.95rem;font-family:inherit;color:#111;background:var(--light);transition:border-color .2s,box-shadow .2s;}
+.login-field input:focus{outline:none;border-color:var(--copper);box-shadow:0 0 0 3px rgba(192,98,42,.14);background:#fff;}
+.login-error{color:#c0392b;font-size:.8rem;margin-top:-8px;margin-bottom:12px;min-height:18px;text-align:left;}
+.btn-login{width:100%;margin-top:8px;background:linear-gradient(135deg,var(--navy) 0%,var(--steel) 100%);color:#fff;border:none;border-radius:12px;padding:14px;font-size:1rem;font-family:'Playfair Display',serif;letter-spacing:.06em;cursor:pointer;box-shadow:0 6px 20px rgba(26,42,74,.35);transition:transform .15s,box-shadow .15s;}
+.btn-login:hover{transform:translateY(-2px);}
+
+/* MAIN */
+#mainApp{display:none;flex-direction:column;align-items:center;padding:40px 20px 60px;}
+.page-header{text-align:center;margin-bottom:36px;}
+.page-header img.brand-logo{height:64px;filter:drop-shadow(0 2px 12px rgba(0,0,0,.4));margin-bottom:12px;}
+.page-header h1{font-family:'Playfair Display',serif;font-size:2rem;color:#fff;letter-spacing:.04em;}
+.page-header p{color:rgba(255,255,255,.55);font-size:.9rem;margin-top:4px;letter-spacing:.08em;text-transform:uppercase;}
+.topbar{width:100%;max-width:1200px;display:flex;justify-content:flex-end;margin-bottom:-20px;}
+.btn-logout{background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:7px 18px;font-size:.8rem;font-family:inherit;cursor:pointer;transition:all .2s;}
+.btn-logout:hover{background:rgba(255,255,255,.18);color:#fff;}
+.workspace{display:grid;grid-template-columns:460px 1fr;gap:32px;width:100%;max-width:1200px;align-items:start;}
+
+/* FORM PANEL */
+.form-panel{background:#fff;border-radius:20px;padding:32px 28px;box-shadow:0 24px 64px rgba(0,0,0,.35);}
+.form-panel h2{font-family:'Playfair Display',serif;font-size:1.15rem;color:var(--navy);margin-bottom:18px;border-bottom:2px solid var(--copper);padding-bottom:9px;}
+.sheet-section{background:#f0f4ff;border:1.5px solid #c4cef5;border-radius:12px;padding:14px 16px;margin-bottom:18px;}
+.sheet-section h3{font-size:.76rem;font-weight:700;color:var(--steel);letter-spacing:.07em;text-transform:uppercase;margin-bottom:9px;}
+.sheet-row{display:flex;gap:8px;align-items:flex-end;}
+.sheet-row input{flex:1;border:1.5px solid #c4cef5;border-radius:8px;padding:9px 11px;font-size:.82rem;font-family:inherit;color:#111;background:#fff;transition:border-color .2s;}
+.sheet-row input:focus{outline:none;border-color:var(--steel);}
+.btn-load{background:var(--steel);color:#fff;border:none;border-radius:8px;padding:9px 14px;font-size:.78rem;font-family:inherit;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .2s;flex-shrink:0;}
+.btn-load:hover{background:var(--navy);}
+.sheet-status{font-size:.75rem;margin-top:7px;min-height:16px;color:#666;}
+.sheet-status.ok{color:#2a7a2a;}
+.sheet-status.err{color:#c0392b;}
+
+/* MULTI-SELECT */
+.multisel-section{margin-bottom:18px;}
+.multisel-section>label{display:block;font-size:.72rem;font-weight:700;color:var(--steel);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;}
+.multisel-search{position:relative;}
+.multisel-search input{width:100%;border:1.5px solid #d8dde6;border-radius:10px;padding:10px 13px;font-size:.9rem;font-family:inherit;color:#111;background:var(--light);transition:border-color .2s;}
+.multisel-search input:focus{outline:none;border-color:var(--copper);background:#fff;}
+.nom-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1.5px solid #d8dde6;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.15);max-height:200px;overflow-y:auto;z-index:100;display:none;}
+.nom-dropdown.open{display:block;}
+.nom-item{padding:9px 13px;font-size:.86rem;cursor:pointer;transition:background .1s;border-bottom:1px solid #f0f2f5;display:flex;align-items:center;gap:8px;}
+.nom-item:last-child{border-bottom:none;}
+.nom-item:hover{background:#f0f4ff;}
+.nom-item.already{background:#e8f5e9;color:#2a7a2a;}
+.nom-item strong{font-weight:700;}
+.nom-item span{color:#888;font-size:.76rem;}
+.selected-list{margin-top:10px;display:flex;flex-direction:column;gap:6px;max-height:180px;overflow-y:auto;}
+.sel-chip{display:flex;align-items:center;justify-content:space-between;background:#f0f4ff;border:1.5px solid #c4cef5;border-radius:8px;padding:7px 12px;font-size:.82rem;color:var(--navy);cursor:pointer;}
+.sel-chip-name{font-weight:600;}
+.sel-chip-matr{color:#888;font-size:.74rem;margin-left:6px;}
+.sel-chip-remove{background:none;border:none;color:#aaa;font-size:1rem;cursor:pointer;padding:0 0 0 8px;line-height:1;transition:color .15s;}
+.sel-chip-remove:hover{color:#c0392b;}
+.sel-empty{color:#aaa;font-size:.8rem;padding:8px 0;text-align:center;}
+
+/* DIRECTORY FOTO */
+.dir-section{background:#fff8f0;border:1.5px solid #f0d0a0;border-radius:12px;padding:14px 16px;margin-bottom:4px;}
+.dir-section h3{font-size:.76rem;font-weight:700;color:var(--copper);letter-spacing:.07em;text-transform:uppercase;margin-bottom:9px;}
+.dir-row{display:flex;gap:8px;align-items:center;}
+.dir-display{flex:1;border:1.5px solid #e8c888;border-radius:8px;padding:8px 11px;font-size:.78rem;font-family:inherit;color:#555;background:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dir-display.set{color:var(--navy);font-weight:600;}
+.btn-dir{background:var(--copper);color:#fff;border:none;border-radius:8px;padding:8px 12px;font-size:.76rem;font-family:inherit;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .2s;flex-shrink:0;}
+.btn-dir:hover{background:#a04820;}
+#dirInput{display:none;}
+
+/* PHOTO SUGGESTION */
+.photo-suggest{background:#e8f5e9;border:1.5px solid #a0d0a0;border-radius:10px;padding:12px 14px;margin-bottom:10px;display:none;}
+.photo-suggest-title{font-size:.76rem;font-weight:700;color:#2a6a2a;margin-bottom:8px;}
+.photo-suggest-row{display:flex;align-items:center;gap:10px;}
+.photo-suggest-thumb{width:48px;height:60px;border-radius:5px;border:1.5px solid #a0d0a0;background:#d0e8d0;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.4rem;}
+.photo-suggest-thumb img{width:100%;height:100%;object-fit:cover;}
+.photo-suggest-info{flex:1;font-size:.78rem;color:#2a4a2a;}
+.photo-suggest-info strong{display:block;font-size:.82rem;margin-bottom:3px;}
+.photo-suggest-btns{display:flex;gap:7px;margin-top:7px;}
+.btn-confirm{background:#2a7a2a;color:#fff;border:none;border-radius:7px;padding:6px 13px;font-size:.74rem;font-family:inherit;cursor:pointer;font-weight:600;transition:background .2s;}
+.btn-confirm:hover{background:#1a5a1a;}
+.btn-reject{background:transparent;border:1.5px solid #a0d0a0;color:#2a6a2a;border-radius:7px;padding:6px 10px;font-size:.74rem;font-family:inherit;cursor:pointer;transition:all .2s;}
+.btn-reject:hover{border-color:#c00;color:#c00;}
+
+/* PHOTO DROP */
+.photo-section{margin-top:4px;}
+.photo-section label.big{display:block;font-size:.76rem;font-weight:700;color:var(--steel);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px;}
+.photo-drop{border:2px dashed #c0c8d8;border-radius:12px;padding:16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:border-color .2s,background .2s;background:var(--light);}
+.photo-drop:hover,.photo-drop.drag-over{border-color:var(--copper);background:#fff8f4;}
+.photo-thumb{width:56px;height:70px;border-radius:7px;border:2px solid #d8dde6;background:#e8ebf0;display:flex;align-items:center;justify-content:center;font-size:1.6rem;color:#b0b8c8;overflow:hidden;flex-shrink:0;}
+.photo-thumb img{width:100%;height:100%;object-fit:cover;}
+.photo-info{flex:1;}
+.photo-info strong{display:block;color:var(--navy);font-size:.86rem;margin-bottom:3px;}
+.photo-info span{color:#888;font-size:.74rem;}
+.photo-btns{display:flex;gap:7px;margin-top:7px;}
+.btn-browse{background:var(--navy);color:#fff;border:none;border-radius:7px;padding:6px 13px;font-size:.74rem;font-family:inherit;cursor:pointer;font-weight:600;transition:background .2s;}
+.btn-browse:hover{background:var(--steel);}
+.btn-clrph{background:transparent;border:1.5px solid #d0d6e0;color:#888;border-radius:7px;padding:6px 10px;font-size:.74rem;font-family:inherit;cursor:pointer;transition:all .2s;}
+.btn-clrph:hover{border-color:#c00;color:#c00;}
+#fileInput{display:none;}
+.dir-tip{background:#eef2ff;border-left:3px solid var(--steel);border-radius:0 8px 8px 0;padding:8px 12px;font-size:.74rem;color:var(--steel);margin-top:8px;line-height:1.5;}
+
+/* ACTIONS */
+.action-row{display:flex;gap:10px;margin-top:18px;}
+.btn-generate{flex:1;background:linear-gradient(135deg,var(--copper) 0%,#a04820 100%);color:#fff;border:none;border-radius:12px;padding:13px;font-size:.95rem;font-family:'Playfair Display',serif;letter-spacing:.05em;cursor:pointer;box-shadow:0 6px 20px rgba(192,98,42,.35);transition:transform .15s;}
+.btn-generate:hover{transform:translateY(-2px);}
+.btn-pdf-all{flex:1;background:linear-gradient(135deg,#c0392b 0%,#8e1a0e 100%);color:#fff;border:none;border-radius:12px;padding:13px;font-size:.95rem;font-family:'Playfair Display',serif;letter-spacing:.05em;cursor:pointer;box-shadow:0 6px 20px rgba(192,57,43,.35);transition:transform .15s;}
+.btn-pdf-all:hover{transform:translateY(-2px);}
+.btn-pdf-all:disabled{opacity:.6;cursor:not-allowed;transform:none;}
+
+/* PREVIEW */
+.preview-panel{display:flex;flex-direction:column;align-items:center;gap:20px;}
+.preview-panel>h2{font-family:'Playfair Display',serif;color:rgba(255,255,255,.8);font-size:1.1rem;align-self:flex-start;}
+.preview-nav{display:flex;align-items:center;gap:12px;}
+.preview-nav button{background:rgba(255,255,255,.15);color:#fff;border:1.5px solid rgba(255,255,255,.25);border-radius:8px;padding:6px 14px;font-family:inherit;font-size:.82rem;cursor:pointer;transition:background .2s;}
+.preview-nav button:hover{background:rgba(255,255,255,.25);}
+.preview-nav button:disabled{opacity:.35;cursor:not-allowed;}
+.preview-nav span{color:rgba(255,255,255,.7);font-size:.84rem;min-width:80px;text-align:center;}
+.card-wrap{perspective:1200px;}
+
+/* CARD */
+.card{width:var(--card-w);height:var(--card-h);border-radius:7px;position:relative;background:linear-gradient(160deg,#f0f4fa 0%,#ffffff 60%,#e8f0f8 100%);box-shadow:0 20px 60px rgba(0,0,0,.55),0 2px 4px rgba(0,0,0,.2);overflow:hidden;transition:transform .6s cubic-bezier(.25,.8,.25,1);display:flex;flex-direction:column;}
+.card:hover{transform:rotateY(-6deg) rotateX(2deg) scale(1.02);}
+.card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:7px;background:linear-gradient(180deg,var(--navy) 0%,var(--copper) 100%);z-index:1;}
+.card-top{display:flex;align-items:center;padding:5px 8px 4px 14px;border-bottom:1px solid rgba(26,42,74,.12);gap:6px;}
+.card-logo{height:24px;}
+.card-company{font-size:8px;font-weight:600;color:var(--navy);letter-spacing:.04em;text-transform:uppercase;line-height:1.2;}
+.card-company span{display:block;color:var(--copper);font-weight:400;}
+.card-body{flex:1;display:flex;padding:5px 7px 4px 14px;gap:6px;overflow:hidden;}
+.card-photo-col{display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0;width:22mm;}
+.card-photo-slot{width:100%;flex:1;min-height:28px;border-radius:4px;background:#d8dde6;overflow:hidden;border:1px solid #c0c8d8;display:flex;align-items:center;justify-content:center;font-size:16px;color:#a0a8b8;}
+.card-photo-slot img{width:100%;height:100%;object-fit:cover;}
+.card-matr-badge{width:100%;background:var(--navy);border-radius:3px;padding:2px 4px;text-align:center;}
+.card-matr-badge span{font-size:10px;color:rgba(255,255,255,.6);letter-spacing:.04em;text-transform:uppercase;display:block;line-height:1.2;}
+.card-matr-badge strong{font-size:10px;color:#fff;letter-spacing:.06em;display:block;line-height:1.3;}
+.card-fields{flex:1;display:flex;flex-direction:column;gap:2.5px;justify-content:center;}
+.card-row{display:flex;font-size:9px;line-height:1.3;border-bottom:.5px solid rgba(26,42,74,.08);padding-bottom:2px;}
+.card-row:last-child{border-bottom:none;}
+.card-lbl{color:var(--copper);font-weight:700;letter-spacing:.05em;text-transform:uppercase;min-width:28px;margin-right:4px;}
+.card-val{color:var(--navy);font-weight:600;}
+.card-footer{display:flex;align-items:flex-end;justify-content:flex-end;padding:3px 8px 4px 14px;border-top:1px solid rgba(26,42,74,.10);}
+.card-signature{font-size:5.5px;color:#bbb;text-align:right;line-height:1.5;}
+.card-qr{width:16mm;height:16mm;border-radius:3px;border:1px solid #d0d6e0;overflow:hidden;flex-shrink:0;align-self:flex-end;}
+.card-qr img{width:100%;height:100%;}
+
+/* PRINT ACTIONS */
+.card-scale-note{color:rgba(255,255,255,.4);font-size:.72rem;margin-top:-12px;}
+.print-actions{display:flex;gap:10px;}
+.btn-pa{padding:11px 22px;border-radius:10px;border:none;font-family:'Source Sans 3',sans-serif;font-size:.86rem;font-weight:600;cursor:pointer;transition:all .2s;letter-spacing:.04em;}
+.btn-print{background:rgba(255,255,255,.14);color:#fff;border:1.5px solid rgba(255,255,255,.3);}
+.btn-print:hover{background:rgba(255,255,255,.22);}
+.btn-png{background:var(--copper);color:#fff;box-shadow:0 4px 14px rgba(192,98,42,.4);}
+.btn-png:hover{background:#a04820;}
+.btn-pdf{background:linear-gradient(135deg,#c0392b 0%,#8e1a0e 100%);color:#fff;box-shadow:0 4px 14px rgba(192,57,43,.4);}
+.btn-pdf:hover{background:#8e1a0e;}
+
+/* MODAL directory */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal-box{background:#fff;border-radius:18px;padding:32px 28px;max-width:480px;width:90%;box-shadow:0 24px 60px rgba(0,0,0,.4);}
+.modal-box h3{font-family:'Playfair Display',serif;color:var(--navy);font-size:1.2rem;margin-bottom:8px;}
+.modal-box p{color:#666;font-size:.84rem;margin-bottom:20px;line-height:1.5;}
+.modal-saved{background:#eef2ff;border-radius:8px;padding:10px 14px;font-size:.8rem;color:var(--steel);margin-bottom:16px;display:none;}
+.modal-saved strong{display:block;color:var(--navy);margin-bottom:2px;}
+.modal-btns{display:flex;gap:10px;flex-wrap:wrap;}
+.btn-modal-use{flex:1;background:var(--copper);color:#fff;border:none;border-radius:10px;padding:11px;font-family:inherit;font-size:.88rem;font-weight:600;cursor:pointer;transition:background .2s;}
+.btn-modal-use:hover{background:#a04820;}
+.btn-modal-new{flex:1;background:var(--navy);color:#fff;border:none;border-radius:10px;padding:11px;font-family:inherit;font-size:.88rem;font-weight:600;cursor:pointer;transition:background .2s;}
+.btn-modal-new:hover{background:var(--steel);}
+.btn-modal-skip{width:100%;background:transparent;border:1.5px solid #d0d6e0;color:#888;border-radius:10px;padding:9px;font-family:inherit;font-size:.84rem;cursor:pointer;margin-top:4px;transition:all .2s;}
+.btn-modal-skip:hover{border-color:var(--navy);color:var(--navy);}
+
+.spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;margin-right:5px;vertical-align:middle;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* PRINT / PDF layout */
+@media print {
+  #loginScreen,#modalDir{display:none!important;}
+  body{background:white;margin:0;padding:0;}
+  #mainApp{padding:0;display:block!important;}
+  .form-panel,.page-header,.print-actions,.card-scale-note,.topbar,.preview-panel>h2,.preview-nav{display:none!important;}
+  .workspace{display:block!important;}
+  .preview-panel{display:block!important;margin:0;padding:0;}
+  .card-wrap{
+    perspective:none;
+    position:absolute;
+    top:5mm;
+    left:5mm;
+    margin:0;
+  }
+  .card{
+    transform:none!important;
+    box-shadow:none!important;
+    /* crop marks */
+    outline:none;
+  }
+  /* crop mark lines */
+  .print-crop{display:block!important;}
+}
+/* crop marks — hidden on screen */
+.print-crop{display:none;position:absolute;}
+.crop-tl-h{top:3mm;left:0;width:3mm;height:.3px;background:#000;}
+.crop-tl-v{top:0;left:3mm;width:.3px;height:3mm;background:#000;}
+.crop-tr-h{top:3mm;right:0;width:3mm;height:.3px;background:#000;}
+.crop-tr-v{top:0;right:3mm;width:.3px;height:3mm;background:#000;}
+.crop-bl-h{bottom:3mm;left:0;width:3mm;height:.3px;background:#000;}
+.crop-bl-v{bottom:0;left:3mm;width:.3px;height:3mm;background:#000;}
+.crop-br-h{bottom:3mm;right:0;width:3mm;height:.3px;background:#000;}
+.crop-br-v{bottom:0;right:3mm;width:.3px;height:3mm;background:#000;}
+</style>
+</head>
+<body>
+
+<!-- MODAL DIRECTORY all'avvio -->
+<div class="modal-overlay" id="modalDir">
+  <div class="modal-box">
+    <h3>📂 Cartella Foto Dipendenti</h3>
+    <p>Seleziona la cartella dove sono salvate le foto dei dipendenti. Il programma cercherà automaticamente la foto giusta quando scegli un dipendente.</p>
+    <div class="modal-saved" id="modalSavedInfo">
+      <strong>Percorso memorizzato:</strong>
+      <span id="modalSavedPath"></span>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-modal-use" id="btnModalUseSaved" onclick="usesavedDir()" style="display:none">✅ Usa cartella corrente</button>
+      <button class="btn-modal-new" id="btnModalPickNew" onclick="pickDirFromModal()">📂 Scegli cartella</button>
+    </div>
+    <button class="btn-modal-skip" onclick="skipDir()">Salta – sceglierò le foto manualmente</button>
+  </div>
+</div>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-box">
+    <img class="login-logo" id="loginLogo" src="" alt="Delta Impianti">
+    <h1>Accesso Riservato</h1>
+    <p class="sub">Gestione Tesserini</p>
+    <div class="login-field">
+      <label>User ID</label>
+      <input type="text" id="inputUID" placeholder="Inserisci User ID" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="login-field">
+      <label>Password</label>
+      <input type="password" id="inputPWD" placeholder="Inserisci Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="login-error" id="loginError"></div>
+    <button class="btn-login" onclick="doLogin()">Accedi</button>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="mainApp">
+  <div class="topbar">
+    <button class="btn-logout" onclick="doLogout()">⎋ Esci</button>
+  </div>
+  <div class="page-header">
+    <img class="brand-logo" id="headerLogo" src="" alt="Delta Impianti">
+    <h1>Gestione Tesserini</h1>
+    <p>Delta Impianti Sistemi Tecnologici S.r.l.</p>
+  </div>
+
+  <div class="workspace">
+    <div class="form-panel">
+      <h2>📋 Anagrafica Dipendenti</h2>
+
+      <!-- Google Sheet -->
+      <div class="sheet-section">
+        <h3>🔗 Collegamento Google Sheet</h3>
+        <div class="sheet-row">
+          <input type="text" id="sheetUrl" placeholder="URL Google Sheet o Apps Script Web App…"
+            value="https://script.google.com/macros/s/AKfycbx8P7wj6WXg84dn89Ym9JsJJdAeKGRQJYJj06AUsY060r_VfguJs995OcIMbju5Pjo/exec">
+          <button class="btn-load" id="btnLoad" onclick="loadSheet()">Carica</button>
+        </div>
+        <div class="sheet-status" id="sheetStatus">Nessun foglio collegato</div>
+        <div style="font-size:.7rem;margin-top:4px">
+          <a id="csvDirectLink" href="#" target="_blank" style="color:var(--steel);text-decoration:none;display:none">⬇ Scarica CSV direttamente</a>
+        </div>
+        <div style="font-size:.7rem;color:#888;margin-top:6px;line-height:1.5">
+          💡 Puoi usare:<br>
+          • <strong>URL Google Sheet</strong> (condiviso come "Chiunque – Visualizzatore")<br>
+          • <strong>URL Apps Script Web App</strong> (script.google.com/…/exec)<br>
+          Colonne: A=Cognome B=Nome C=Matricola F=DataNascita G=LuogoNascita O=DataAssunzione
+        </div>
+        <div id="manualImportSection" style="display:none;margin-top:12px;background:#fff8f0;border:1.5px solid #f0c080;border-radius:10px;padding:12px 14px">
+          <div style="font-size:.76rem;font-weight:700;color:#a06010;margin-bottom:6px">📥 Opzioni di importazione</div>
+          <div style="font-size:.7rem;color:#805010;margin-bottom:8px;line-height:1.6">
+            <strong>Opzione A – Apps Script (consigliato):</strong><br>
+            1. Nel tuo Sheet: <strong>Estensioni → Apps Script</strong><br>
+            2. Incolla questo codice e pubblica come Web App pubblica:<br>
+            <code style="display:block;background:#fff8e0;padding:6px 8px;border-radius:6px;margin:4px 0;font-size:.68rem;line-height:1.5;overflow-x:auto">function doGet(){
+  var ss=SpreadsheetApp.openById('ID_DEL_TUO_FOGLIO');
+  var sh=ss.getSheets()[0];
+  var data=sh.getDataRange().getValues();
+  return ContentService.createTextOutput(JSON.stringify({data:data}))
+    .setMimeType(ContentService.MimeType.JSON);
+}</code>
+            3. Copia l'URL /exec e incollalo nel campo URL qui sopra.<br><br>
+            <strong>Opzione B – CSV manuale:</strong><br>
+            1. Apri Google Sheet → <strong>File → Scarica → CSV</strong><br>
+            2. Seleziona il file qui sotto:
+          </div>
+          <input type="file" id="manualCSVInput" accept=".csv,.txt" onchange="handleManualCSV(this)" style="font-size:.78rem;font-family:inherit;width:100%">
+        </div>
+      </div>
+
+      <!-- Selezione multi -->
+      <div class="multisel-section">
+        <label>👥 Seleziona Dipendenti (anche più di uno)</label>
+        <div class="multisel-search">
+          <input type="text" id="nomSearch" placeholder="Cerca per cognome, nome o matricola…"
+            oninput="filterNominativi()" onfocus="openDropdown()" onblur="scheduleClose()" autocomplete="off">
+          <div class="nom-dropdown" id="nomDropdown"></div>
+        </div>
+        <div class="selected-list" id="selectedList">
+          <div class="sel-empty">Nessun dipendente selezionato</div>
+        </div>
+      </div>
+
+      <hr style="border:none;border-top:1.5px dashed #dde0e8;margin:14px 0">
+      <h2 style="margin-bottom:12px">📷 Foto Dipendente</h2>
+
+      <!-- Directory foto -->
+      <div class="dir-section">
+        <h3>📁 Cartella foto</h3>
+        <div class="dir-row">
+          <div class="dir-display" id="dirDisplay">Nessuna cartella selezionata</div>
+          <button class="btn-dir" onclick="pickDirectory()">Cambia</button>
+        </div>
+        <input type="file" id="dirInput" webkitdirectory accept="image/*" onchange="handleDirSelected(this)" style="display:none">
+      </div>
+
+      <!-- Foto suggerita automaticamente -->
+      <div class="photo-suggest" id="photoSuggest">
+        <div class="photo-suggest-title">✨ Foto trovata automaticamente!</div>
+        <div class="photo-suggest-row">
+          <div class="photo-suggest-thumb" id="suggestThumb">👤</div>
+          <div class="photo-suggest-info">
+            <strong id="suggestFilename">–</strong>
+            <span id="suggestDesc">File trovato nella cartella selezionata</span>
+            <div class="photo-suggest-btns">
+              <button class="btn-confirm" onclick="confirmSuggestedPhoto()">✅ Usa questa foto</button>
+              <button class="btn-reject" onclick="rejectSuggestedPhoto()">✕ No, scegli altra</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Drop zone manuale -->
+      <div class="photo-section" id="photoManualSection">
+        <div class="photo-drop" id="photoDrop" onclick="openFilePicker()"
+             ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+          <div class="photo-thumb" id="photoThumb">👤</div>
+          <div class="photo-info">
+            <strong>Seleziona o trascina una foto</strong>
+            <span>Oppure verrà cercata automaticamente dalla cartella</span>
+            <div class="photo-btns">
+              <button class="btn-browse" onclick="event.stopPropagation();openFilePicker()">📂 Sfoglia</button>
+              <button class="btn-clrph" onclick="event.stopPropagation();clearPhoto()">✕ Rimuovi</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <input type="file" id="fileInput" accept="image/*" onchange="handleFileSelect(this)">
+
+      <div class="action-row">
+        <button class="btn-generate" onclick="updateCard()">👁 Aggiorna Anteprima</button>
+        <button class="btn-pdf-all" id="btnPdfAll" onclick="generateAllPDFs()">📄 Salva PDF Selezionati</button>
+      </div>
+    </div>
+
+    <!-- PREVIEW -->
+    <div class="preview-panel">
+      <h2>Anteprima Tesserino</h2>
+      <div class="preview-nav">
+        <button onclick="navigate(-1)" id="btnPrev">◀ Prec.</button>
+        <span id="navLabel">–</span>
+        <button onclick="navigate(1)" id="btnNext">Succ. ▶</button>
+      </div>
+
+      <div class="card-wrap" id="printArea">
+        <!-- Crop marks -->
+        <div style="position:relative;display:inline-block;">
+          <span class="print-crop crop-tl-h"></span>
+          <span class="print-crop crop-tl-v"></span>
+          <span class="print-crop crop-tr-h"></span>
+          <span class="print-crop crop-tr-v"></span>
+          <span class="print-crop crop-bl-h"></span>
+          <span class="print-crop crop-bl-v"></span>
+          <span class="print-crop crop-br-h"></span>
+          <span class="print-crop crop-br-v"></span>
+          <div class="card" id="theCard">
+            <div class="card-top">
+              <img class="card-logo" id="cardLogo" src="" alt="Delta Impianti">
+              <div class="card-company">Delta Impianti Sistemi Tecnologici S.r.l.<span>Via E. Montale, 3 – 80016 Marano (NA) · Tel. 081.576.06.98</span></div>
+            </div>
+            <div class="card-body">
+              <div class="card-photo-col">
+                <div class="card-photo-slot" id="cardPhotoSlot">👤</div>
+                <div class="card-matr-badge">
+                  <span>Matricola</span>
+                  <strong id="cMatricola">–</strong>
+                </div>
+              </div>
+              <div class="card-fields">
+                <div class="card-row"><span class="card-lbl">NOME</span><span class="card-val" id="cNome">–</span></div>
+                <div class="card-row"><span class="card-lbl">COGN.</span><span class="card-val" id="cCognome">–</span></div>
+                <div class="card-row"><span class="card-lbl">ASS.</span><span class="card-val" id="cDataAss">–</span></div>
+                <div class="card-row"><span class="card-lbl">NATO A</span><span class="card-val" id="cLuogoNascita">–</span></div>
+                <div class="card-row"><span class="card-lbl">NASC.</span><span class="card-val" id="cDataNascita">–</span></div>
+              </div>
+              <div class="card-qr"><img id="cardQR" src="" alt="QR"></div>
+            </div>
+            <div class="card-footer">
+              <div class="card-signature">FIRMA<br>__________________</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p class="card-scale-note">Anteprima in scala reale (85,6 × 54 mm)</p>
+      <div class="print-actions">
+        <button class="btn-pa btn-print" onclick="doPrint()">🖨 Stampa</button>
+        <button class="btn-pa btn-png" onclick="downloadPNG()">⬇ PNG</button>
+        <button class="btn-pa btn-pdf" onclick="downloadCurrentPDF()">📄 PDF</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const LOGO_B64 = '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAC4AdADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD3+kJFFZt/czQuuxciplJRV2VCPM7I06Kq210syjJ5qzRGSewpJp2YtFFUNTmmhty0SkmqSuxF+isjTtSMihJuHrVBBGRTcWhJ3HUUUUhiUtNJwM1QOoqtz5RFTKSjuVGLlsaNFMVgwyKdTJFooopgFFFFABRRRQAUnFQXE6xL15qjBeTSyYxxms3USdi4021c1qKRc7RnrS1oQFJkUyWZIk3MaxZNSme62RjK1UYtiub1FQ27O8ILjBqapGFFFFABRUFxcLAmTUVverOcAVPOr2KUG1cuUUUVRIUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAlRTRCVCDUtLSaBOzuYUkT2cmVzgmtK1uhKuCealmhEqYNYlxusXyvSud/u3fodStVVnudBSOgdSDWVY6qs7bWbmtYEEZFbQmpaownTlB2Zz99YmCUzRirOn6gWCxyHDVqyIJE2npWBqFobVjMldEXzaMytbU6EMGGRS1y9jr/75YZGxXSRSrMgdDkVEoOO4KSY/tWde2e7LoPm9a0qQjIwazlFSRpGTi7oxrW6aJhG+Sa10cOuRVC8s8gunBqrDffZTskPSsVJ03aRvKCqK8dzcpKggnSZAVqet009Uc7TTsxaKSjoKYhaguLhYV5OD2qlf6mltwrDNUI5n1J/m6CsJ1lfljubwoSa5nsSlpLuXocZrVtrZYU9zRbWywJxViqhC2r3FUqX91bC1HLKsSbnOBVTUNQjs4Sxf5q546vLqMnkDlTXTGm3qc7kkXLy8ku5TFHylaGnaesSrI/3qNO05YUV2+9WnRKXRAkLRSUVmULVe4nWFCTUFzqMVuSD1FZ4Ml7NuU/Ie1YzqJaLc2hSb1lsLl7ubAPymtW2t1hjHHNFtbLCg4Gas0QhbViqVL6IKKKK2MgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooASqV/aC5iPrir1JUyipKzKjJxd0cLNDNYT5UHGa6DStVWZdsjYIq5f2CXSEnqBXKTQTafPlQcZrhalQldbHpKUMTGz3O5BBHFQXVuLmExms3TNVEyhXYZFbAYMMg5rtp1FLVHnVKcoO0jz7V9Kks52mQEir+g66yssEzYFdXd2kd3D5b9DXC6tpEljcNLECQK7oTVRWkc0k4u6PQI5UlTchyKfXGaFrrJsgmYCuvjmSVco2RXPOm4s0UrjiMiuf1ixkIZ0OK6GmyIsilWGRWFSnzqxtSqOnK6OO0/UXtZgkhJxXWW9wtxFvXFc/q2ksN0sYxVPTtSezlEbk4HXNcdOpKlLllsd9WnGvHnhudl2z2rL1LU1t0KqwyRUV1rEQgJjYZIrnv32oT/ADA4zWtavpaJjh8Nd809hAJtQn5BIzXV6ZYraR57kUzTdOS2QNjk1pnge1FCjy+9LcWJxHN7kdhao6hqEdnCWLfNRf6jFaQltwzXC6jfzalclF5Q16FOlzas4JSsJf38+p3TRrllNdF4f0XyVWZ+GFM0HQ1jVZn611IAUYFaVKiS5YkwjfVju1JS0nArmNQrK1PU1to2UH5qXUtSW2iIB5rmAJtQueCcGuStWt7sTtw2Hv789hUM1/dZUnBrrdPtfs9uA33qh03TVt4wWX5q06dCk4+89ycTXU/djsLRRRXUcgUUlFAC0UnSigBaKKKACiiigAooooAKKKKACikooAWiiigAooooAKKKKACiiigAooooAKKSjtQAtFFFABRRRQAnaqN/YpdRknqBV+kNTKKkrMqMnF3Rws8UlhNlc9a17DVy4Csat6rZecucVzEsb2kuQK86SlRlpsetDkxENdzuopVlUEGmXdql1CY2rB03UuQC3NdFFKsqAg5rupVVLVHm1qLg7M4DVtLexuGljB4qfStdkjAjdsV1eqWgubcjFcHf6e9rMXVTxXowkqisziknF3R6DZXqXEY+bJq5Xn2k6s8LKrnFdnbahHLDksM1hVp8uprCXMWZduwh+RXz58S9NuvC5t7nT/EWsOJ5Cpimu2bHGcgjFe0anqm0FQ1fPvxV1Vr7xHFabvltYuRn+Juf5banBS9piFFbdToq03ToOb6lfwg+seItaFvca3qi20aeZIUunyewHXivW7TwjqKQ79G8W6pbXAGVF0VuEJ9wwzXG/CvRXGg3OpFcG4l2Kf8AZT/65P5V6NZ3jWzhG7VljsTyYlqK0R0YfD8+GTe7OftfihqfhrXP7C8c2EcT/wAF9ag7GXs23uPcdPSu9vtbhW3WW3mWSNwGRlOQw9RXmPxlFvqXhi1u8D7RazgB8c7GGCPz21zHw61u4u7aXRZpGcQjzIcnoufmH0zj869GnRhWpKrHTueXUcqc+Rno93qE+oTGPkqa39C0VQFlcc1S0XSSXVytdrBH5UQUCsqtTlVojhG+rKOr6bbajpU1ncTTwQthmkgmMTLjn7w+lfNng+bVPEXj7T9NXVtRuLM3W8+bcOcxL8xzz3Vf1r3n4k6wdF8Aatcq22WSLyI8ddz/AC8fQEn8K8v+A2kh9U1TWpF+W3iW3jJ/vPycfgo/76rSg+ShOoxT1moo97dwi5JrG1DV1hBA6is3xT4ji0bSLq+k+ZYELbQcbj2H4mvLPCniPV/G3ilpJsW9haIX8iI/eZuBuPf+I/hXmOFSdOU47I76UYRklPdnow82/uc5ODXS6bpq28asw5qDSbFUVWK1t9BisKFL7UjXE1/sR2FHSiiius4RaKKKYEE8fnW8ke903qV3IcMvuD614F8U4tU8F6hp8emeLPEEgukd3jn1CRimCMYIxwcn8q+g6+XPi7q/9q/EO9RWzFZKtqn/AAHlv/Hi1dmBhz1bPYxrO0TY+Gtn4l8b6ldC78V67BY2qqZGivpN7M3QAk4HQ175pWnLpWnRWS3V3dCPP727mMsjZOeWPXriuI+C+j/2Z4AiuXTbLfytOc9dv3V/Rc/jXotZ4qalUajokVSVojqKSiuY0FopKDxTAWim15F8Rvizf+GNfl0bSba2eSKNWkmmy21mGcBQR2K9fWrp05VJcsSZSUVdnr9FZ+kfbP7Hsv7RYNemFTOQuP3mPm4+tX6h6FBXlupfGzStO8VvpBsJpLWGbyJrwSAbWBwSFxyB9a9R7V5zffB3w/f+KW1mSW4CSTefLaKRsds5PbIBPUVrQ9ld+0InzfZPSKKSisixaKSilcBaKaelGKYDqKTiikAUV518S/iQ/gr7NaWVrHcX1zGzgyt8sS9ASo+9k57jpWr8OZNTvPCMOq6xcyT3moubk56Ih4RVHQDaAePWtXSkoe0exPOr2Ok1K/t9L0251C6fbBbRtLIR/dAzXBeDfi5Y+LPEZ0f+zpbN5Axt3eUP5m0ZIIx8pwCe/Su/vrODUbCexuk8yC4jaORT3UjBrivCfwp0bwlrjarb3FzcTgMsAmIxFng9Opxx+dOn7LkfPv0FLm5lbY9AooorIsKKKKACiiigBrKGGDWLqOnBlJArcprKGGDWdSmpqzNKdRwd0cBJHJaS5Ud62tM1PGFJq3qWmhxkDNc3JE9pL8oPWvPalRkerGUMRCz3O7jkWZeDms3U9NWdCQOaztO1UIQrNXQC5jaPduGMV6FGunqjzK1CUHZnnGo2LWcxdQcimW+tSRAKWwa39ekimB2EE1xM9u4kLBTXT9YjVXIQqEqfvtaHQx3H2vLyNgLySfSvnfWr/wDtTW7297TTMy/7ufl/TFeu6/q50nwlfybisskXkpjrl+P5En8K8z8E6UNa8a6TYsMxtOryj/YX5m/QGurLsN9XU6kiMbifbKMEfSvhXw+mj+C9L090CyRW6mXj/lofmb/x4msnWFWB22mui1XWI4FZFcZribu4kvZyByprgqYX215M0o4p0mkcT8Q7w/8ACOCJjnzJlUfqf6VhfCdRJ49toj92SKRT+Wf6VN8Tbjy7uy04HlEMr/jwv8j+dcdY6jcab9oe2kaOWaEw714IVvvc/QY/GvXwVGUMLydWc2LqxnX5kfQa+NJtb8UDwx4QMeI8td6m6b0iUddi9GPbJ4z+dct4/wBf8V+APEdmLbxLPfQ3EXmmO6jjx1wQQFAx9MVN8Kr7RvB3gy713WLiOB7yUiMdXdE4CqOp+bdWcPDevfFfxS2u6jBJpmijCRGQfN5Q6KgPUnk7unP4VjFQhUd/hX4sl8zj5sf8W/F41zwp4ajRTEb6P7dNGD93A2ge4yX/ACrp/hzANE+H9mOkt2WuX/4F93/x0LXlvjho9W+ILaXp67bW1MWnWyrztVML/wChbq9kt4P3cUMWRDGgRR6AcVyZjU9lQjTj11O3AUeepKctkeU/EG/8SRRC21S+s3tbuRnjhgB3BVORk7R6itj4e+EvGy6Imo6HeaXaW1624/aVJchSRn7h9+/eud+IU0ur+O/7NthuMPl2sa+rnr+rY/CvpbSNNh0jSbTToB+7toViXjrgYzW7n7PDQi0rvXYwm+atJpuyC6vbTRdLkvL+5WGCBN0kz8f5PtXmOn+NvEvxE16Wy8MgaVo9uf399JGHl29sA8Bjg8frXHfGHxlLrviFtCs5G+wWEmxlX/lrN0J/D7o/GvZPh94YTwr4RtLIoFupF866bHJkbqPw+7+FS6So0lOS1exnzOcrLY4rxnrviH4Z3+n3EWrzaxYXYdXt78JuVlxyrKoI+9+ldD8LtZ1fxJpeo65qsxKXV0VtoF+5Eij+H8Tj/gNeY/HDWxqfjCDS4W3pp0W1sc/vHwT+myvcfCOj/wBgeEtL0sjDwW6iT/fPL/8AjxNVWjGNCLa95/kEXeb8jdoooriNSlqd/Fpml3d/Mf3VtC8r89lGT/Kvjn/Sdb1nH37u+uP++pHb/E19G/GjWP7M8AzWyNtlv5Ut19dv3m/RcfjXkfwg0j+1fiFZyMpMVkjXT/UcL/48w/KvTwaVOjKqzmq+9JRPoxPsXhnw5GJpFistPtlUueMIi4/pXinjfxz440+707VVuF0uxvd0lnZLtaQRrt+aUEfxbhx9elexeIdAfxA+nQy3AXT4bkT3MG3/AF+3lFJ9N2CR3xXiHxbvV1/4m2+kpIFitVjt2bsrMdzt+AYf981hhIqU9Vcuq2o6Hr2p+KL5NF0yLS7RLnXdTgWWGAnCRjALSP6IufxOBXlOk+OvGmk/EqDR9X1AXhe8S1ngAXZ85A+XgYxmvWvDsSQWFz4jvU8prmIPGjDm3tUH7tPy+Y/7TH0r5/8ADN9c6p8QJNYRBJfSzvLbRt0aeQkJ+Cltx9kNXh4RamrLRBUbTR7l4o1nxHqEt1pPg5IBPb8Xd/MwCQsRny0z1fHJ4wPrXFfCHx7ruteI5tI1a8e8heBpY3dRujZSO4HQg11/iy4h8BfDC6igkJnaMwrK/wB+aaT7zn/a5ZvwrjfgHoR8zUtekU4A+yQnHXoz/wDstKCh7CTa9BSb50keieMPGa+HRFY2Nq2oa1cqWgtEPRf77n+FR/nuR88aRaap8QPHig3CR3t5I0zzbMpHtGc7fTgCvZPF1ovg3wRr+rT3Rudc1Q+S10V2n5jtVEH8KquePauX+AWjeZqGqa068QottEfdvmb9Av51ph3GlRlUW4ppymkxlx4/8Z/DzxMNK8RzR6pa8Pu2AM8Z/iRsDng8Nnp+Ne3aZqNtq+mW2oWb77a4jEkZ9jXhfx+eNvEekxjHmLaMzfQucfyNd58HnuZPhhbqrjeskywlxkD5jj8Mk1lXpxlRjVSsyoSfO4h4+8a6lpsN7p/hm3E99aQefe3LY2WceOOvBY9l/Q1z3wb8aeIPEGtX2n6rdveW6W/nLJIBlG3AYyPXJ/KofiNt8F/DxNF8/wC0arrM5kvrk/emPDO30ztUD0rX+B3h/wDs7wtPq8yFZtRk+Qkc+UmQPzO79KfLCOHbt6BdupY9I1HULTSrCa+vp1htoV3PI54Ary/TvG3iX4ia9LY+GcaTpFuf399JGHl29sA8Bjg8frXG/GHxlLrviFtCs5G+wWEmxlX/AJazdCfw+6Pxr2T4feGE8K+EbOyKBbqRfOumxyZG6j8Pu/hUOkqNJTlu9gUnKVlsjivGeu+Ifhnf6fcRavNrFhdh1e3vwm9WXHKsqgj736Vv/DDXNW8Q6RqWv6xcYiuLkiCLOI4Y1HO38Sf++a8y+OGtjUvGEGlwtvTT4trAc/vHwT+m2vW7XwjOvw803w1Hc/ZVEcaXpUfM6HmVVPYsSRmqqwjGjFyWr/IItubscF8Q/HPik2MWraJIbDQGufs8E4x5t02Cd4BGQnynH/167fQ/GZT4ZWHiLV9z3MkWzy0X57iXcVVVA/ibH69q88+O2pRRXOj+H7UKkNrD5xjXouflQfgFP512HgLSP7QGmTzrusNCgW2tV/hkuiP30v8AwEnYPfdVThH2EZNWCLfO0cR418YfEbw/qlld391Fp63KtJBZwbXVAP4X45PIr1Zr7xB4h8CWGoaBJaWmqXkMUpa5zsTIy2PlbPtxXi3xM1GXxf8AE9dJtDlIJUsIcc/Pu+c/99Ej/gNe76rdQeEvBVxPEMRadZ7YlI/urtQfnilXSUIWS5hQd29dD5r11tc8WeO/7PvrqC81MziyWSIbYvlbbxwPlzk5xXvfhDSvGulzpF4g1PTJNLgtxHDDZpggjAXJKDgAGvJ/gppLap45k1GfLrYwtKXPOZH+UfoWP4V7t4l0q71vRJdOtLz7J9oZUmlA+bys/OF9yOKrF1LSVLS3oFJaOR5V8Q/iP4gNsLjw7utNE88266iNpa5kGc7M9F4POOfXtXZ/CnxDqniTwZ9r1V/MnjuGhWUgAyKADk4+pH4V5d8Y9Sh/tvTvC+mRBbTSoVURR/8APRwML+C7f++jXt3g7QV8N+EtO0rAEkUQMuO8h+Zv1JqayhGhGys2OLbmzoKKKK4TYKKKKACiiigAooooAaVDLg9KxdT04MjMoycVuVFKyrGdxwMVnUgpLU0pVHCV0edyxvBNyCOavR6rIItme1Taw0LP8pFYmDuryW3CVke/BKrFOSJ/nuJemea1otC86HeV5+lV9MMYkG410Goy6r/ZgOhLYNd7hxes6x7e/wB0E56V1YOPvcxw46o0uVI8E+LEptbu003p1ncfov8A7NVX4Vp9n1i61LHMMXlIfduv6D9a1fF3gPxVrWszapql/oxuHwu2B5AqgdhlP5mqei6D4j0JHhgk0uSORtzB2k6/XbX1sJRdHlufOO6lc7y7upbyY9TmrJntNC0ibVNSfy7eEfix7KPUmuVhHiwtiH+xI3/vSNKf6VdHwx1nxbcxzeIPFCNEn3IbaIkL/u5wB9cGueSjH4nZFxuzyuY6r438VSNbW7zXt7L8kSchB2Gf7oHel8WaE/hnxDLo7kO9vHHukAxvZkDMfpliPwr6f8L+C9F8I2pi0u22yOMS3Eh3SSfU/wBBxXHfFD4ZTeKbmLV9Kmijv0Ty5Y5TtWVR0IPZh+vtiiOOj7S20SvYu3mZXhXw7pWk29lctZRzXQiQmWUbyDjnbn7vfpWzq/j5oru5traJZYLG3ea9mLf6tsfIg9WNclBp/jxLSLTrl7CzjjURm5Hzy7Rxxg4Jq1d+GQPCN3o+nybZZhuaWQ8yPuBJY++MV4kpKNX97Pmu++y7nuKn7SnenG1kcP8ADuyfVfGX2yf5hArzyMem48f1J/CvZfD2spdabq+svbhdIsdxgn3f68IpLnHpkYB71594M+GWum9kW+vhY2Ew23CW8mZJl/u57D3r1rxT4ZkvvAF5oGhCK2ZoVjgQ8IFDKSv4gEfjXfifY1ayle+3yR50J1KVPktZ6nh/wtsZPEfxOiv7nkQNJfzH/azx/wCPMPyr21PF73uj+IdUs7f/AIl2nQyG3ut2ftDxqxcquPuggAHvzXnPgz4R+JbS4nGqaj/ZthcLsuYbWTdJOv8Ad3D7or2UaTYrozaOluiWJgNv5KDAEZGMflWmLqQlPR3Rz001E+YPhvpX9vfEPTI5/nRJTcylud235ufq2Pzr6Y1/WV0TS3uNvmXDsIraL/npK33V+ncnsATXjVl8L/GnhDxYmoeHms7qOJmEUssgUMh42yL1/KvTrDw1qd4st/4kvYbjU3heKGO3QiC0Vhg7AeSx7see31rFzhOaknoFJOKszwPwTZT+K/ibZvdt55kumvLhz0YKS5/AnA/Gvo7Q9d/ty61BreDGn20vkw3O7/XuM+ZtH90HjOeTn0rx7wr8H/FNlrbPd3y6fZlWimltZsyTRnqq46Z9TXuVjY2+m2MFlaQrDbwIEjjTooFTjKkJSXK7hSi0tS5RSVla5/bYsAdAGnm93j/j/LiMLzn7nOelcRseIfHnWPtPiSw0lGOyzgMjjtvkP/xKj/vquj+AekeRompau6Ya5mEMZ/2UGT+rf+O1h6z8HfGuv6vdapfajoz3Nw25yJZAPQAfu+gAA/Cu18C+G/G/hO1t9Lnl0GfS0l3MVeXzlUnLbflAP416NSpBYdU4vU54p8/M0eg3NxFaWs1zM22KFGd29ABk18veEtOl8efExXuQWinuHvLoH/nnnJX6HIX8a+iPGWl6jrXhO/0zS5II7q6j8rfMxVApPzdAT93I/GuY+F/w8u/BX9oT6lLazXdxtRGt2ZgsY57qOp/lWFCrGnTk+rLnFuS7Fv4t6uNH+Hd8qNtkvNtpGP8Ae+9/46Grz/4EeHPtGqXniGdMpajyIM/89GHzH8F4/wCBV2vxQ8Ea541XToNNuLKK2ti7yC5kZSznAH3VPQA/nXS+C/Dg8KeFLLSiY2mjXdO6dGkbliPbt9BTVWMMO4J6tg4t1L9jyT48a611rFhoMTEpbJ58qjvI3Cj8F/8AQq77w/u8H6N4d8LWVulxqs4EtyhbAhTO6WRj9TtX1OK43x98LPEmt+OLjVtLaCSC6KOJJJdhhZVC4P8A3z2r03wr4YOg20k97dvf6vdYN3eydXI6Kvoo7CqqzgqEIp/IUU+dtnl3x91nddaXoiNxGrXUo9z8qfyf86734T6ONH+HunBhiW7Bun99/wB3/wAd214b4puZfGvxSuIoGJW5vFtISOmwEID+mfxr1q8sPibpmmtomlyabd2qr5UGoMdk6R4wNwzjcB3ANaVoctGFO9nuKLvNyPKvilqp8RfEe7jtQZRAUsoQnJZl6gf8CLV9EeD9F/4R3wlpulHG+3hAkx/fPzN/48TXF/D/AOE0Xhu9TV9YnS81NeYlTmOInqefvN716eelY4mtGSVOGyHTi03JnzP8RL+bxr8UP7Msm3JFKthB3Gc4Zv8Avon8BXss2vW2gWl9oulW5ePRNKeaeYEbYCqfImP4mbBP4e9eZad8JPGtj4sF7bXlpbmOZmW/LK/XPzbMdcHpivY9J8KWGleH7jSfnnW7Ehu5pTmS4dx87MfU1eInTSjGLukKmpXbZ83/AA30r+3viHpkc/zokpuZS3O7b83P1bH519Ma/rK6Jpb3G3zLh2EVtF/z0lb7q/TuT2AJrxqx+F/jTwh4sTUPDzWd1HEzCKWWQKGQ8bZF6/lXp1h4a1O8WW/8SXsNxqbwvFDHboRBaKwwdgPJY92PPb6vFzhOaknoOknFWZ4F4IspvFfxOs3um88vdNd3DnowUlz+BOB+NfR+h67/AG3dag1vBjT7aXyYbnd/r3GfM2j+6DxnPJz6V494V+D/AIostcZ7y+XTrMq0U0trNmSaM9VXHTPqa9ol05rLw9Jp+ipFbvHbNFahiQiNtwuSMnrSxlSE5JRd0FJNLU+Z/FlxceNPifdpZ/O1xdi1gz02r8gP04zX0ZcPbeC/BczoSYdOtSwLcl2A7+7N+prgPh38J9S8MeKF1fV7iymEMTCBbd2YiRuMnco/h3fnXb+PtDvvEngy/wBL06REuZghUOcBtrhtue2cUq9WE5RhF+6ghFpNvdnjHwd03+0fGN34g1B18nTYmnllk4HmPnk/hvP4V0XxU8Xy6h4AtI/s5to9UumeBWb5pLaPBDsO24lTj0xT/Avwo12zMsev3gg0qVlebT4Jc/aCvQOR/D7Z5q58Vfh9r/inWbC50dYHtYbbyfKaQJ5bbic89sFR+FayqU5YlNvQlRkqdiH4YTW/g74a3GvXSM8+o3O2CFB88xHyJGo7ktv/ADr1GTUmsPDzanqkaW7w23nXEaPuCELlgD3rkfA/w+udFjsrnX9QOoXllHss4B/qbQHrt9W/2q6Hxro114h8H6jpVlKsdzcRhUZ+AcMDg/XGPxrlqyhOrvu9zWKageDfDyxl8Z/E46pfANHFI9/cbumc/KP++iv4LXv/AIf15PEEFzd28DLZJO0VvOW/4+FXq4HZd2QPXFeTeDPhR4os5bqDU75dP026UJdRWzq8twoz8m7Hyjnnnv0r2y0tYLG0itbaJYoIUCRxoMBVHQCrxk4yl7rvYmkmlqWaKKK5DUKKKKACiiigAopKa7hFyTQG4O4Rck1g6nqYVSoajU9TABUHmue+e7l+Yd64a9f7MT0cNhvtyIWEk8vQnJrTj0ljDux2rS07SwQCwrdESJHg9KilhnJXka1sby6QPPnje3k6EYNWxrxgiKB6s6+0SBtpFcPPI7ykD7ua6cPhZQld7GNfFRqRstzRvbmS9mLDJzV6w0V54w7LUWi24d13dK9DsbeGOAKhBr0niY25YnluhJas83vtPktZjhTgVoaPqbW7KrGut1PSknRmA5NcTf2D2cpdRyK0jUjNakOLi9D0G1v45oAxYZrK1fUsIQh5rlLbVZIl2k4NWY5HvJM7utePi6lnyxPXwlC655Efz3Evc5p91biys3uZnEcSDczN0ArodO0kZDkVn/EbTJrjwRerZoWePbIyr1KBst/j+FZYbCe0klN7s1xOP9knyK9jntI1y8u0E9jboLck7HuJCu/nsADx/nFdFo/jZbnW00O60+eC/b5shg8e3bncG4yOMdK4Pwdrttd2MOlysIruEbY89JF9veultrdYfEMepM371LcwdP8Aazn+ddcoxw1WVOcdOhyq+LoxqU5XfU7S78QaXY6rbaZcXkcd7c/6qI5y3p7DPvWrzj3rirSbwr4j8SRS5iudXsBuUqzfKAfybBPvitu58UaPatcCW74t2CzyJE7pE3ozKCFP1NbuN0uVO5w3s3zM2qXtXMeIfGWmaPoj3cd5BJPJA0lom7IlPbGO2az/AIea82s6VLNe6itzqUrtLLEP+WKZ2quBwOmfxp+wnyObWgvax51DqdvRWHe+KtF08qbm+CI0hi80Rs0Yf+6XA2g/U09vEujprMWkHUIjfSDKxDJ7Z69AcVKpy6Irnj3NmisWTxRosOtLo76hEL9jgQ8nn0J6A+2aLnxRotprEWkz6jEl9IwVYuT8x6AkcAn3o9nLsHPHuac9xFa20txPIscUSF3djwqjqaqaTrFhrln9s024W4g3FdwBGCO2DyKg8Qano+m6ZJ/bdxFHaTgxssmT5gI5AA5P4Uvh7TNJ0zR4otGRVspv3ysGLb9w65PtijlXJd/8AXM+eyNik7VT1DUrLSrU3V/cR28AIXfIcDJrgfCnjNte8Y3xvNQjjtVYxafaj5fMyx+bHc7R3/vVUKMpxclshSqqMlHqz0ukrN1DW9P0tZPtNwQYk8yRI42kZE/vFVBIHvRBrem3Olf2pFeQtY7SxnLYUAeuelZ8j3sXzLY0s1yfjnxhp3hbQ7vzb2NNRe3b7Nbh/wB4zHhTjrjPf2rR/wCEr0Rb4Wkt8Ibgx+aqXEbRbl55BYAEcHp6UWOs6FrtvPeW09vcQ27FJJXTATHPVh09+lXGDi+aSdiXJPRM+bvhjfaTpnjqzvdZuEt7eFXKO4O0SbcDPp1NfU0E0dzBHPDIskUiB0dDuVlPIIPcVj6Rqnh3XmnXTHtbgwkCQLFjHp1HI9xVi48QaVZ366c1xuu9ufs8EbSuo9woOB9a2xNR1Z3s0yKfLGN0zWrjvGPjK78L3NlDFpsV19sYrFm4KtuGP4dv+0Oc11NrdQXttHcW0qSwyDcjqcgivN9S/wCKi+M1nafet9LiEjjHG4fN/wChMg/Cpw9NOTc1orsVebUfderPTkLbBvxuxzjpT81m6nrenaNGjX90kPmNtjXlmc+iqOT+FS2eoWt/5gt5CXiIWRGQo6EjI3KwBHFYNO1zZSWxdoPSsjUPEOl6ZdxWt3dhbqbHlworSSN/wFQTWQPFOoXHiKOz0/SGuNOWXybi58zDRt3ynVQP9rGapU5PUl1EjZ1XxBpWiPbrqN6lu1w22IMD8x/DtyOa1AR2rk9XPhHxDr9tpGoSQXOo27FooQzZB6spI47fdPpW/eaja6f5YuJQjSttjQAs7n0VRyfwpyjZKyd/62FGV2+xdrLGv6WddOii9jOohdxh5yBjPXpnHOKTT/EWlaobgWl6jNbZ89HBRo8ddysAR0NZOjr4U1vxFc63pbRXGpQfu5ZV3DGRjODweBjcKIw35k9P61Bzvble51lFLRUGggopaKAEopaKQBRRRTAKKKKACikoPAoAa7hFyawtT1MKCoarGqX6QoVDc4rlysl3Mcg9a4sRW+zE9DC4dP35bDQJLuX5vWuh0zSx95xijTNNAwWFbyIEXApUKN/ekPE4n7EAVQi8dBWNq2qrAjKGAq3qV9HbQnL4NcDf3Ml9dMq8oa9WjTvqzy5zsR3d1JfTFeqmrNroTSKCV4q/o+jlmUstdlb2qQRbAKuvNcvKhUtHzM4X7M1gwCDvW7pmp7cKTVvUtOV1JUVzckUlpLkA9a8KXNTlc9yDhXhbqdwJ1Me7NcvrrRPuK9ajGrbYCN3NUBvvJc5yDWk8S2rR3M6WDs7z2MOWJgxYDitLSbgRTLv45rdTQ/Mh34rBvtOe1lLqDxXXhKCnrM58XiXH3YbHf2NzHNENuAfSkt9Qgu7+8s0yZbQosuenzLuH6GuU0PU/LkVJWINR6fYa5o/ijU9ZWJL6x1Bz5kFu/wC9jCn5GG7APy9RnvXW6KVzznUehyvxE8BxaTG2u6QvlW4cGaBf+WRJ4ZfbPbtU+hXc3iDwoZZ5tkkLmK4k6FkAzn8Qf5113ieTV9e0WfStL0mdGuRskuLtljSNe/GSxPbgVm3ng660P4b3elaUn2q/m5kYcF9xAbH/AAHitako1qMYVH7yej8jOlzUKspQXutao5fwGVk1m/1ryxGsh8qFQMALwf6LUWj6j/wimpXvh3xDGZ9H1JjumJI68b8+/GfTH52z4c8RWnhe3W1i+x3MKjEG8Fn6lmJ6Ak4wOw+vDdStr7xFo1pYT2bRXvmKZJJcBYv7xHrn0FT7ZRrPma5XpvqrbM1dB1KK5E+da+TvujR+IFpbabomh+FNIjCi5n+QE7jjd6+7Pn8Kt/EDV/8AhG9EsdA0kiC4uUWIyL8pWJcL19/X2NVrnSdduviDY3ttYCazsrdI4JpZQsY+U/M2OThmPHfFWPE/hLUrfX9E1uxgl1QWbL9pQuPMciQvuGfdj06cdq3hKHuJu61e+78zkqQmuayt0+QanoV34i0vTvD2kQyWujWeDJe3CbfNIGPkQ/MerHPT+ufc2yJ8StI0TT2ydMtyN+OTKy5Z2/NW/DFd5af2jrF7DdXtpJYWcB3xW7yAySv/AHn28ADsuevJ6CsPwZ4c1K28Razr2s23k3N1IVgQurbUJyfuk+ij8KiFa0Xd7fm/zKlS1Vlu/wAEc/rwW5+J+k6RYKAbCMbSRu/enL729cfKxz1wfWrOtWsWq/ErQ9BtF/c6Z/pM75+YsSHJY9ydq8+rVreDfDWpW/ifWdf1m28m4uZCLdC6thCcn7pPYKKzvDnh3Xv+Eo16bULTyIr2QhrzzBu8vcSUQD+8NvPYD1q3OK2fwr8WRySa1W7/AARD8S4XmntNMQifUNTuFVMr/qYlOFUemWOSfb2Fek6bZRabpttZQ/6q3iWNfoBivPr7Rdfn+KD6jFp6tbwwiK0uJHHlw/J97HVsFn+X1/OvRLSD7PaRQB5JNi7d8jZZvcmuetK0IxT/AKZvRV5ylYxPHGorpXg/ULn5d/l7I8jPzt8oP4Zz+FctoksXgr4VR6m8SG8nHmx7l+87/c/8dAP4Vd+J+lavrVhp9nplm9zEZy84R1UjAwvX/eb8qZ4p8H6lrXhRlUJ/aAeOSO1WT93GiKyiNSepwxy3c+2K0pOKpxi3u9fkRU53OUorZaGToD6jd+DLiDToJrzWdYLNdXcg2xxBvl+ZzwTt7L0zVLRdNx4z0/wks5msNMY3V12EswGenoDtGPr612WktrV9otnpH9lzaVFHAkNxcSSKCFC4IiA5ycdTjFYOn6FrHhb4g6hqUWlT39ldrIsbQOuVDMrAHcRjGMVoqi99adf6+XQzlBrlevmdT4i8P6VcajB4hv0B/s2J5GB/jCgsAfYHca5H4dR/bNI1C/viPsZunu7kdmYDIU+w+Zj/AMA962vE+j69qWgX0kVssup3mIEgjlULbwZ3EbmIBY4G4/T0zS3nh6/0r4WPo2mW/m37QqsqIRlmYjzPrxkVnCS9nyN6tpeiNJR9/mS2V/VnOeFL6az0PxX4yMYSSd2ECY4Bzn8eWX/vmtD4a266d4X1LxRfkvNcGSVpW5JRM55923flV7SPCN9d+BzpOoxLZH7MYoYA+7Dk7jI+O5YDjsM+tV73TNdl8EWPhWx02SKZkWK7uJGAijAOTg/xbj6dq0nOErxT3f4IzjCUbSa2X4j/AIUXsv8AwiN/cXTYhjupHVj0A2qzY9s5/OoPhZC2o3mueI5gfMupyiZ7DO4/zX8q2b7w1caR8N7rRdHTz7nySnoZCx+c/kW/QVD4E0LVLHSbGPUbf7HHab2jgEmXlkYnLvjgYU4C++T2qJzi4zknu/wLhCSlCL6L8TnfCRk8XfEnUdau/wB5BY5ECnkJyVQfkGP1rR8P6nJffGPXPIObZbfynHbKFFz+e786taTpOoeDbfXIbHT5Lua5nMlkY9u1gRwGJ+7t75/CpfCPh+LwPol7qutXSC6m/eXMuciNc8L7nJ/E1VSpB81trJJExjJNJ922ZOkWq6Z8Udc1DW5QpCs9tM5+Xax4GfULxj607wlY6zqfinX9cRJrC1vEaOB5UKk/MNrhT3CqfxNY+nnx14PE93BYtfWNzKZ5PMj3OxP8TAHcpIx1rtdK8VyeLfCWo3Gl27w6nDGyCAtnEm07Sp//AFdKdVSSurNWSvfYVPlbs7p6uxzHhm3tNR+Imo6tDGE0zR4zFG/XcQCu4nuT87Z+laXw/u5vE3iHVvEl2SQhFtaoTxGnUj8tv61D4R8J6svhW5067gOnCZZSx8z55pHXapOPuqo7dz+q+BrTxH4Z0670h9Cd53uDIk7yqIRlVXJOc4+XsM0VZRalZ6qyXoFOMk4trR6v1NnVvD2j6Kuo675ZSN9095HuJ88j5gnsC2CfX6ZrP+FGmPDo13rEyATajMWAAxhFJ6f8CLfpS+NtA1aTwathpqyXtzc3IlvXHBkOM5x6ZVQB2AFdH4Z0+7sbCP7Un2crEkUVokm5YUUdz0ZyeSfw9zi52oPW93+Rso3q7aL9ToaKKK5DqCiiigAooooAKKKKACikoJxQAE4FZepakluhVW+YijUtTW3QqrckVy+JtQn+YZGa5K1a3uxO3D4bm9+ewp83UJ/mB610dhpSRqGan6bpqQIGPWtUDAxRRofakPEYm/uw2GoioMCqmoX8dnCWLgMKTUNRjsoSxYbq4TUL+fUroouSpr0aVK/oedOYuoX82pXJjUEoa2dG0EbVdxT9D0MIqySDmuqRBGgVelXUqW0iTGPVkcFtHAuFqekoOOtczdzUawBGDXO62IY426ZrQ1PU0toyB1rmR52oXHBJDdq48RUT91bnfhKMl772MQq5lyudpNdLoojON+M1eTQl+z5Yc4rHlhlsJvlBxmuRU5U2pSO+VaNdckWdtEiqny9KqXmmR3IYkcmqml6oswCOea2Qc816tKomrxPEq05RlaR57qulvZTtLGDxV/RNaZGWKVsV1V5ZpdRlSK4XVdLeynaWMHArthJVFZnM046o7+KZZUDIcipO1cZoeuMjLDM2K7GKVJY9yHIrnqU3FmilchubZJl6DNc9qGlMgLqMGuqqOWJZFwwzXNUoqaOmjXlTZyFhqD2sojcniuqtrhJ4wwrB1XSymZIxiqdhqD2sojck4rlhN0pcstjsq0o1488NzsgKAagtrhbiLcCKsdq7009UeY04uzE7e1LS0UwG+1LS0UgGHilp1FMBvFFOooAZ0zS4yKdRSAbQc4p1FACUn86dRQA3ArO1rSotb0m40+dnRJQMOh5UghgR9CBWlRTTad0JpNWZkJ/biRCJ1sJXAx55dkz7+XtP/oVQ+H/DsWgRXZWTzbm8naeeQLtBY9lXso9K3aKrndmhcqvcKTGO9OoqChOnNApaKACiiimAUUUUAFFFFABRSUtACVWu51hhbJwccU+e4WFTk81jsJL+b5gcA1lUnbRG1Knf3nsYrw3F9c/MhxurpdN01LVAxHJFXILZIVGAM1PWdKgo+8zWtiXJcq2AYApksqQrukbAollSJdzHArnr27lvZTbpynrXXGFzjbsYmsy3N/fNHEpaI9DWroWgCNVmkGGFbGm6elvCCw+b3rSGAOK1lVsuVEKPViKgVcAU6kpawNBOlUdTuvs1sWHWp7i4SCPcaxyj39z/ANMz2rGrPSy3NqNO75pbIxAJtQueM4aum07TFt4gWUbqsW2nwwAFUANXKzpUOV80jWviudcsdhAABiqN/YJcoxxzitCkrolFSVmc0ZuLujiTZ3FncZRTtzXV2VzHPEoVssByKnkiWRCpA5FYckEmlzboQW3HmueMHRd1sdUqirqz3Ogqrd2aXcRRhRbXSzIORuq1XTGXVHJKLWjPPtT0aa2uWeFGOK6PQL1RaLBO22b+6a3Sqt1ArntT0v7POb6DJf8Auiuj2ntFZmXLyu6OjorI03VDMirP8snpWsCGHFYtNFp3GSRrIuGGa5vVdKK7pIxiunprxrIu1hkVjUpKa1N6NaVN3RyekXckVysLk11gII4rNvdMVoi1uoWT1qCxvWtyLeYkuO9ZU70/dka1rVvfgblFNVgw4p1dRyMKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAEqC4nWJTzg1Oaz723aV19KibdtCoJN6lJjJdydOM1rW9usK8daS2tlgXjrViphC2rNKlS+i2FqKWVIU3OcCpe1UdShM1uVFbJXZgzKu7uS6lMScqav6dp6xIJG+9Rp+nLEqu33q06uUraISXVi0lLRWZQd6r3E6xITUx6VjzxyS3JXPy1nOVloaU4pvUjJe8m4PymtW2tlhjAxzRbWywoMgZqxU04W1ZVSpfRbBRS0VsYhRRRQAlRyxrIpB9KlopNXBOzMF4nspcp3NadtdLKvJ5qWaFZUINUYbQxSHHrWHK4S02OhyjOOu5p01lDrg04dBS10HOc9f2BgmM8fJq1p+obgElOGrUkjEibWrHk03Zdb1rVSTVmTa2xtBgRkUVHApWIA1LWRQ3tWffWYYGRB8/rWlSEZFTKKkrMqEnF3Rj2l00LCNzk1rI4dciqF5Z5BdOtLZCRMBjmsoOUXZms1GS5kaNFFFbmAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUlFFABS0UUAFFFFABRRRQAUUUUAFM8td27HNFFLcB9FFFMAooooAKKKKACiiigBKKKKQC0UUUwCiiigAooooAKKKKAGkZFIFC9KKKVgvoPooopgFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAf/Z';
+const logoSrc = 'data:image/jpeg;base64,' + LOGO_B64;
+['loginLogo','headerLogo','cardLogo'].forEach(id => document.getElementById(id).src = logoSrc);
+
+// ===== STORAGE KEYS =====
+const STORAGE_KEY_DIR  = 'delta_photoDir_name';
+const STORAGE_KEY_FILE_LIST = 'delta_photoDir_fileList';
+
+// ===== LOGIN =====
+const CREDENTIALS = {uid:'Admin', pwd:'DELTAAD'};
+function doLogin() {
+  const uid = document.getElementById('inputUID').value.trim();
+  const pwd = document.getElementById('inputPWD').value;
+  if (uid === CREDENTIALS.uid && pwd === CREDENTIALS.pwd) {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'flex';
+    document.getElementById('loginError').textContent = '';
+    updateCsvLink();
+    setTimeout(loadSheet, 400);
+    showDirModal();
+  } else {
+    document.getElementById('loginError').textContent = '⚠ Credenziali non valide. Riprova.';
+    document.getElementById('inputPWD').value = '';
+    document.getElementById('inputPWD').focus();
+  }
+}
+function doLogout() {
+  document.getElementById('mainApp').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('inputUID').value = '';
+  document.getElementById('inputPWD').value = '';
+}
+
+// ===== DIRECTORY FOTO =====
+// dirFiles: array of File objects from the selected directory
+let dirFiles = [];
+let dirName  = '';
+let suggestedFile = null;
+
+function showDirModal() {
+  const saved = localStorage.getItem(STORAGE_KEY_DIR);
+  const btnUse = document.getElementById('btnModalUseSaved');
+  const btnNew = document.getElementById('btnModalPickNew');
+
+  if (dirFiles.length > 0) {
+    // Cartella già caricata in questa sessione: offri di usarla direttamente
+    document.getElementById('modalSavedInfo').style.display = 'block';
+    document.getElementById('modalSavedPath').textContent =
+      dirName + ' (' + dirFiles.length + ' foto in memoria)';
+    btnUse.textContent = '✅ Usa cartella corrente';
+    btnUse.style.display = 'flex';
+    btnNew.textContent = '📂 Cambia cartella';
+  } else if (saved) {
+    // Nessun file in memoria ma nome salvato (sessione precedente)
+    document.getElementById('modalSavedInfo').style.display = 'block';
+    document.getElementById('modalSavedPath').textContent =
+      saved + ' (riseleziona la cartella per accedere ai file)';
+    btnUse.style.display = 'none'; // non possiamo usare senza i File objects
+    btnNew.textContent = '📂 Riseleziona la stessa cartella';
+  } else {
+    document.getElementById('modalSavedInfo').style.display = 'none';
+    btnUse.style.display = 'none';
+    btnNew.textContent = '📂 Scegli cartella';
+  }
+  document.getElementById('modalDir').classList.add('open');
+}
+
+function usesavedDir() {
+  // Usa i file già in memoria (caricati in questa sessione)
+  document.getElementById('modalDir').classList.remove('open');
+  if (dirFiles.length > 0) {
+    setDirDisplay(dirName + ' (' + dirFiles.length + ' foto trovate)');
+    if (selected.length && activeIdx < selected.length) searchPhotoForActive();
+  } else {
+    // Fallback: chiedi di riselezionare
+    document.getElementById('dirInput').click();
+  }
+}
+
+function pickDirFromModal() {
+  document.getElementById('modalDir').classList.remove('open');
+  document.getElementById('dirInput').click();
+}
+
+function skipDir() {
+  document.getElementById('modalDir').classList.remove('open');
+}
+
+function pickDirectory() {
+  document.getElementById('dirInput').click();
+}
+
+function handleDirSelected(input) {
+  const files = Array.from(input.files).filter(f => f.type.startsWith('image/'));
+  if (!files.length) return;
+  dirFiles = files;
+  // Derive directory name from the first file's path
+  const firstPath = input.files[0].webkitRelativePath || input.files[0].name;
+  dirName = firstPath.includes('/') ? firstPath.split('/')[0] : 'Cartella selezionata';
+  localStorage.setItem(STORAGE_KEY_DIR, dirName);
+  setDirDisplay(dirName + ' (' + files.length + ' foto trovate)');
+  // Re-trigger photo search if a dipendente is active
+  if (selected.length && activeIdx < selected.length) {
+    searchPhotoForActive();
+  }
+}
+
+function setDirDisplay(txt) {
+  const el = document.getElementById('dirDisplay');
+  el.textContent = txt;
+  el.classList.add('set');
+}
+
+// Search for a photo matching cognome+nome in dirFiles
+function searchPhotoForActive() {
+  if (!dirFiles.length || !selected.length) return;
+  const dip = selected[activeIdx].dip;
+  const cognome = dip.cognome.toLowerCase().replace(/\s+/g,'');
+  const nome    = dip.nome.toLowerCase().replace(/\s+/g,'');
+
+  let best = null, bestScore = 0;
+  for (const f of dirFiles) {
+    const fn = f.name.toLowerCase().replace(/[^a-z0-9]/g,'');
+    let score = 0;
+    if (fn.includes(cognome) && cognome) score += 2;
+    if (fn.includes(nome) && nome) score += 1;
+    if (score > bestScore) { bestScore = score; best = f; }
+  }
+
+  if (best && bestScore >= 2) {
+    suggestedFile = best;
+    showSuggestion(best);
+  } else {
+    hideSuggestion();
+  }
+}
+
+function showSuggestion(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('suggestThumb').innerHTML = `<img src="${e.target.result}">`;
+    document.getElementById('suggestFilename').textContent = file.name;
+    document.getElementById('suggestDesc').textContent = 'Trovata nella cartella: ' + dirName;
+    document.getElementById('photoSuggest').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function hideSuggestion() {
+  document.getElementById('photoSuggest').style.display = 'none';
+  suggestedFile = null;
+}
+
+function confirmSuggestedPhoto() {
+  if (!suggestedFile) return;
+  loadPhoto(suggestedFile);
+  hideSuggestion();
+}
+
+function rejectSuggestedPhoto() {
+  hideSuggestion();
+  // Leave manual section open
+}
+
+// ===== SHEET LOADING =====
+let dipendenti = [];
+function extractSheetId(url){const m=url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);return m?m[1]:null;}
+function updateCsvLink(){
+  const url=document.getElementById('sheetUrl').value.trim();
+  const id=extractSheetId(url); if(!id)return;
+  const link=document.getElementById('csvDirectLink');
+  link.href=`https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=0`;
+  link.style.display='inline';
+}
+document.getElementById('sheetUrl').addEventListener('input',()=>{updateCsvLink();document.getElementById('manualImportSection').style.display='none';});
+
+function isAppsScriptUrl(url) {
+  return url.includes('script.google.com') && url.includes('/exec');
+}
+
+async function loadSheet() {
+  const url = document.getElementById('sheetUrl').value.trim();
+  const btn  = document.getElementById('btnLoad');
+  const status = document.getElementById('sheetStatus');
+
+  btn.innerHTML = '<span class="spinner"></span>Caricamento...';
+  btn.disabled = true;
+  status.textContent = 'Connessione in corso…';
+  status.className = 'sheet-status';
+
+  // ── Caso 1: URL Apps Script Web App ──────────────────────────────────────
+  if (isAppsScriptUrl(url)) {
+    try {
+      status.textContent = 'Connessione ad Apps Script…';
+      const resp = await Promise.race([
+        fetch(url),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 12000))
+      ]);
+      if (resp.ok) {
+        const text = await resp.text();
+        // L'Apps Script può rispondere con CSV o con JSON {data:[...]}
+        let parsed = false;
+        if (text.trim().startsWith('{') || text.trim().startsWith('[')) {
+          try {
+            const json = JSON.parse(text);
+            // Formato atteso: {data: [[col0,col1,...], ...]} oppure array di array
+            const rows = Array.isArray(json) ? json : (json.data || json.rows || null);
+            if (rows && rows.length > 1) {
+              dipendenti = [];
+              for (let i = 1; i < rows.length; i++) {
+                const cols = rows[i];
+                const cognome = (cols[0]||'').toString().trim();
+                const nome    = (cols[1]||'').toString().trim();
+                const matr    = (cols[2]||'').toString().trim();
+                const dataNascRaw = (cols[5]||'').toString().trim();
+                const luogo   = (cols[6]||'').toString().trim();
+                const dataAssRaw  = (cols[14]||'').toString().trim();
+                if (cognome || nome) {
+                  dipendenti.push({ cognome, nome, matr,
+                    dataNasc: parseAnyDate(dataNascRaw),
+                    luogoNascita: luogo,
+                    dataAss: parseAnyDate(dataAssRaw) });
+                }
+              }
+              parsed = dipendenti.length > 0;
+            }
+          } catch(e) {}
+        }
+        if (!parsed && text.length > 10 && !text.includes('<!DOCTYPE')) {
+          parseCSV(text);
+          parsed = dipendenti.length > 0;
+        }
+        if (parsed) {
+          status.textContent = `✅ Caricati ${dipendenti.length} dipendenti (Apps Script)`;
+          status.className = 'sheet-status ok';
+          renderDropdown('');
+          btn.innerHTML = 'Carica'; btn.disabled = false;
+          return;
+        }
+      }
+    } catch(e) {}
+    status.innerHTML = '❌ Apps Script non raggiungibile. Verifica che la Web App sia pubblicata come "Chiunque". <a href="#" onclick="showManualImport(); return false;" style="color:var(--copper)">↓ Importa CSV manualmente</a>';
+    status.className = 'sheet-status err';
+    document.getElementById('manualImportSection').style.display = 'block';
+    btn.innerHTML = 'Carica'; btn.disabled = false;
+    return;
+  }
+
+  // ── Caso 2: URL Google Sheet normale ─────────────────────────────────────
+  const sheetId = extractSheetId(url);
+  if (!sheetId) {
+    status.textContent = "⚠ URL non valido. Usa URL Google Sheet o URL Apps Script Web App.";
+    status.className = 'sheet-status err';
+    btn.innerHTML = 'Carica'; btn.disabled = false;
+    return;
+  }
+
+  const csvTarget = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=0`;
+  const proxies = [
+    `https://corsproxy.io/?${encodeURIComponent(csvTarget)}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(csvTarget)}`,
+    `https://proxy.cors.sh/${csvTarget}`,
+    `https://thingproxy.freeboard.io/fetch/${csvTarget}`
+  ];
+
+  let loaded = false;
+  for (const proxyUrl of proxies) {
+    try {
+      status.textContent = `Tentativo con proxy… (${proxies.indexOf(proxyUrl)+1}/${proxies.length})`;
+      const resp = await Promise.race([
+        fetch(proxyUrl, { headers: { 'x-requested-with': 'XMLHttpRequest' } }),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000))
+      ]);
+      if (!resp.ok) continue;
+      const text = await resp.text();
+      if (!text || text.length < 10 || text.includes('<!DOCTYPE')) continue;
+      parseCSV(text);
+      if (dipendenti.length === 0) continue;
+      status.textContent = `✅ Caricati ${dipendenti.length} dipendenti`;
+      status.className = 'sheet-status ok';
+      renderDropdown('');
+      loaded = true;
+      break;
+    } catch(e) { continue; }
+  }
+
+  if (!loaded) {
+    status.innerHTML = '❌ Nessun proxy ha funzionato. Prova con un <strong>URL Apps Script Web App</strong> oppure <a href="#" onclick="showManualImport(); return false;" style="color:var(--copper)">↓ Importa manualmente il CSV</a>';
+    status.className = 'sheet-status err';
+    document.getElementById('manualImportSection').style.display = 'block';
+  }
+
+  btn.innerHTML = 'Carica';
+  btn.disabled = false;
+}
+
+function parseCSV(text) {
+  dipendenti = [];
+  const lines = text.trim().split('\n');
+  if (lines.length < 2) return;
+  for (let i = 1; i < lines.length; i++) {
+    const cols = parseCSVLine(lines[i]);
+    const cognome  = (cols[0]||'').replace(/^"|"$/g,'').trim();
+    const nome     = (cols[1]||'').replace(/^"|"$/g,'').trim();
+    const matr     = (cols[2]||'').replace(/^"|"$/g,'').trim();
+    const dataNascRaw = (cols[5]||'').replace(/^"|"$/g,'').trim();
+    const luogo    = (cols[6]||'').replace(/^"|"$/g,'').trim();
+    const dataAssRaw  = (cols[14]||'').replace(/^"|"$/g,'').trim();
+    if (cognome || nome) {
+      dipendenti.push({
+        cognome, nome, matr,
+        dataNasc:  parseAnyDate(dataNascRaw),
+        luogoNascita: luogo,
+        dataAss:   parseAnyDate(dataAssRaw)
+      });
+    }
+  }
+}
+
+function parseCSVLine(line) {
+  const result = []; let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') { inQ = !inQ; }
+    else if (c === ',' && !inQ) { result.push(cur); cur = ''; }
+    else cur += c;
+  }
+  result.push(cur);
+  return result;
+}
+
+function parseAnyDate(val) {
+  if (!val) return '';
+  // Excel serial number
+  if (/^\d{4,6}(\.\d+)?$/.test(val)) {
+    const d = new Date(Date.UTC(1899,11,30) + parseFloat(val)*86400000);
+    return d.toISOString().split('T')[0];
+  }
+  // dd/mm/yyyy or d/m/yyyy
+  const m1 = val.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (m1) return `${m1[3]}-${m1[2].padStart(2,'0')}-${m1[1].padStart(2,'0')}`;
+  // yyyy-mm-dd
+  if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return val;
+  return '';
+}
+
+function showManualImport() {
+  document.getElementById('manualImportSection').style.display = 'block';
+  document.getElementById('manualImportSection').scrollIntoView({behavior:'smooth'});
+}
+
+function handleManualCSV(input) {
+  if (!input.files || !input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    parseCSV(e.target.result);
+    const status = document.getElementById('sheetStatus');
+    if (dipendenti.length > 0) {
+      status.textContent = `✅ Importati ${dipendenti.length} dipendenti da file`;
+      status.className = 'sheet-status ok';
+      renderDropdown('');
+      document.getElementById('manualImportSection').style.display = 'none';
+    } else {
+      status.textContent = '❌ Nessun dato trovato nel file. Verifica il formato.';
+      status.className = 'sheet-status err';
+    }
+  };
+  reader.readAsText(input.files[0]);
+}
+
+// ===== MULTI-SELECT =====
+let selected=[];let activeIdx=0;let closeTimer=null;
+function openDropdown(){filterNominativi();document.getElementById('nomDropdown').classList.add('open');}
+function scheduleClose(){closeTimer=setTimeout(()=>document.getElementById('nomDropdown').classList.remove('open'),200);}
+function filterNominativi(){
+  if(closeTimer){clearTimeout(closeTimer);closeTimer=null;}
+  const q=document.getElementById('nomSearch').value.toLowerCase().trim();
+  renderDropdown(q);document.getElementById('nomDropdown').classList.add('open');
+}
+function renderDropdown(q){
+  const dd=document.getElementById('nomDropdown');
+  if(!dipendenti.length){dd.innerHTML='<div class="nom-item" style="color:#aaa">Carica prima l\'anagrafica</div>';return;}
+  const filtered=q?dipendenti.filter(d=>d.cognome.toLowerCase().includes(q)||d.nome.toLowerCase().includes(q)||d.matr.includes(q)):dipendenti;
+  if(!filtered.length){dd.innerHTML='<div class="nom-item" style="color:#aaa">Nessun risultato</div>';return;}
+  dd.innerHTML=filtered.slice(0,100).map(d=>{
+    const idx=dipendenti.indexOf(d);
+    const already=selected.some(s=>s.dip===d);
+    return`<div class="nom-item${already?' already':''}" onmousedown="toggleSelect(${idx})">${already?'✅ ':''}<strong>${d.cognome} ${d.nome}</strong><span>Matr. ${d.matr}</span></div>`;
+  }).join('');
+}
+function toggleSelect(idx){
+  const d=dipendenti[idx];
+  const existIdx=selected.findIndex(s=>s.dip===d);
+  if(existIdx>=0){selected.splice(existIdx,1);if(activeIdx>=selected.length)activeIdx=Math.max(0,selected.length-1);}
+  else{selected.push({dip:d,photo:null});activeIdx=selected.length-1;}
+  renderChips();updateCard();filterNominativi();
+  // Search photo for newly selected
+  if(existIdx<0) setTimeout(searchPhotoForActive,100);
+}
+function removeSelected(i){selected.splice(i,1);if(activeIdx>=selected.length)activeIdx=Math.max(0,selected.length-1);renderChips();updateCard();}
+function renderChips(){
+  const list=document.getElementById('selectedList');
+  if(!selected.length){list.innerHTML='<div class="sel-empty">Nessun dipendente selezionato</div>';return;}
+  list.innerHTML=selected.map((s,i)=>`
+    <div class="sel-chip" style="${i===activeIdx?'border-color:var(--copper);background:#fff8f0':''}" onclick="setActive(${i})">
+      <div><span class="sel-chip-name">${s.dip.cognome} ${s.dip.nome}</span><span class="sel-chip-matr">Matr. ${s.dip.matr}</span>${s.photo?' 📷':''}</div>
+      <button class="sel-chip-remove" onclick="event.stopPropagation();removeSelected(${i})">✕</button>
+    </div>`).join('');
+}
+function setActive(i){activeIdx=i;renderChips();updateCard();setTimeout(searchPhotoForActive,100);}
+function navigate(dir){if(!selected.length)return;activeIdx=(activeIdx+dir+selected.length)%selected.length;renderChips();updateCard();setTimeout(searchPhotoForActive,100);}
+
+// ===== PHOTO =====
+let photoDataUrl=null;
+function openFilePicker(){document.getElementById('fileInput').click();}
+function handleFileSelect(input){if(input.files&&input.files[0])loadPhoto(input.files[0]);}
+function handleDragOver(e){e.preventDefault();document.getElementById('photoDrop').classList.add('drag-over');}
+function handleDragLeave(e){document.getElementById('photoDrop').classList.remove('drag-over');}
+function handleDrop(e){e.preventDefault();document.getElementById('photoDrop').classList.remove('drag-over');const f=e.dataTransfer.files[0];if(f&&f.type.startsWith('image/'))loadPhoto(f);}
+function loadPhoto(file){
+  const reader=new FileReader();
+  reader.onload=e=>{
+    photoDataUrl=e.target.result;
+    document.getElementById('photoThumb').innerHTML=`<img src="${photoDataUrl}">`;
+    if(selected.length&&activeIdx<selected.length){selected[activeIdx].photo=photoDataUrl;renderChips();}
+    updateCard();
+  };
+  reader.readAsDataURL(file);
+}
+function clearPhoto(){
+  photoDataUrl=null;document.getElementById('photoThumb').innerHTML='👤';document.getElementById('fileInput').value='';
+  if(selected.length&&activeIdx<selected.length)selected[activeIdx].photo=null;
+  document.getElementById('cardPhotoSlot').innerHTML='👤';renderChips();
+}
+
+// ===== CARD =====
+function fmtDate(v){if(!v)return'–';const[y,m,d]=v.split('-');return`${d}/${m}/${y}`;}
+function updateCard(){
+  const nav=document.getElementById('navLabel');
+  const btnP=document.getElementById('btnPrev');
+  const btnN=document.getElementById('btnNext');
+  if(!selected.length){
+    nav.textContent='–';btnP.disabled=btnN.disabled=true;
+    ['cNome','cCognome','cDataAss','cLuogoNascita','cDataNascita','cMatricola'].forEach(id=>document.getElementById(id).textContent='–');
+    document.getElementById('cardPhotoSlot').innerHTML='👤';document.getElementById('cardQR').src='';return;
+  }
+  btnP.disabled=btnN.disabled=selected.length<=1;
+  nav.textContent=`${activeIdx+1} / ${selected.length}`;
+  const{dip,photo}=selected[activeIdx];
+  document.getElementById('cNome').textContent=(dip.nome||'').toUpperCase()||'–';
+  document.getElementById('cCognome').textContent=(dip.cognome||'').toUpperCase()||'–';
+  document.getElementById('cDataAss').textContent=fmtDate(dip.dataAss);
+  document.getElementById('cLuogoNascita').textContent=(dip.luogoNascita||'').toUpperCase()||'–';
+  document.getElementById('cDataNascita').textContent=fmtDate(dip.dataNasc);
+  document.getElementById('cMatricola').textContent=dip.matr||'–';
+  document.getElementById('cardPhotoSlot').innerHTML=photo?`<img src="${photo}">`:'👤';
+  const qd=encodeURIComponent(`DELTA-${dip.cognome} ${dip.nome}-${dip.matr}`);
+  document.getElementById('cardQR').src=`https://api.qrserver.com/v1/create-qr-code/?size=70x70&data=${qd}`;
+  photoDataUrl=photo;
+  document.getElementById('photoThumb').innerHTML=photo?`<img src="${photo}">`:'👤';
+}
+
+// ===== PRINT con posizione top-left =====
+function doPrint(){
+  window.print();
+}
+
+// ===== PDF =====
+function pdfFilename(dip){return`Tesserino ${(dip.cognome||'').trim().toUpperCase()} ${(dip.nome||'').trim().toUpperCase()}`.trim();}
+
+async function renderCardToCanvas(dip,photo){
+  document.getElementById('cNome').textContent=(dip.nome||'').toUpperCase()||'–';
+  document.getElementById('cCognome').textContent=(dip.cognome||'').toUpperCase()||'–';
+  document.getElementById('cDataAss').textContent=fmtDate(dip.dataAss);
+  document.getElementById('cLuogoNascita').textContent=(dip.luogoNascita||'').toUpperCase()||'–';
+  document.getElementById('cDataNascita').textContent=fmtDate(dip.dataNasc);
+  document.getElementById('cMatricola').textContent=dip.matr||'–';
+  document.getElementById('cardPhotoSlot').innerHTML=photo?`<img src="${photo}">`:'👤';
+  const qd=encodeURIComponent(`DELTA-${dip.cognome} ${dip.nome}-${dip.matr}`);
+  document.getElementById('cardQR').src=`https://api.qrserver.com/v1/create-qr-code/?size=70x70&data=${qd}`;
+  await new Promise(r=>setTimeout(r,600));
+  return html2canvas(document.getElementById('theCard'),{scale:6,useCORS:true,backgroundColor:'#ffffff',logging:false});
+}
+
+async function savePDF(dip,photo){
+  const canvas=await renderCardToCanvas(dip,photo);
+  const imgData=canvas.toDataURL('image/jpeg',1.0);
+  const{jsPDF}=window.jspdf;
+
+  // A4 landscape page with card top-left + crop marks
+  const A4_W=297, A4_H=210;
+  const CARD_W=85.6, CARD_H=54;
+  const MARGIN=10; // mm from edge
+  const CROP=3;   // crop mark length mm
+
+  const pdf=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+
+  // Card positioned top-left with margin
+  pdf.addImage(imgData,'JPEG',MARGIN,MARGIN,CARD_W,CARD_H,'','FAST');
+
+  // Draw crop marks (thin black lines)
+  pdf.setDrawColor(0);
+  pdf.setLineWidth(0.1);
+  const x1=MARGIN, y1=MARGIN, x2=MARGIN+CARD_W, y2=MARGIN+CARD_H;
+
+  // Top-left
+  pdf.line(x1-CROP, y1, x1-1, y1);
+  pdf.line(x1, y1-CROP, x1, y1-1);
+  // Top-right
+  pdf.line(x2+1, y1, x2+CROP, y1);
+  pdf.line(x2, y1-CROP, x2, y1-1);
+  // Bottom-left
+  pdf.line(x1-CROP, y2, x1-1, y2);
+  pdf.line(x1, y2+1, x1, y2+CROP);
+  // Bottom-right
+  pdf.line(x2+1, y2, x2+CROP, y2);
+  pdf.line(x2, y2+1, x2, y2+CROP);
+
+  // Small label
+  pdf.setFontSize(6);
+  pdf.setTextColor(150);
+  pdf.text(`${dip.cognome} ${dip.nome} — Delta Impianti Sistemi Tecnologici S.r.l.`, MARGIN, MARGIN+CARD_H+6);
+
+  pdf.setProperties({title:pdfFilename(dip),author:'Delta Impianti Sistemi Tecnologici S.r.l.'});
+  pdf.save(pdfFilename(dip)+'.pdf');
+}
+
+async function downloadCurrentPDF(){
+  if(!selected.length){alert('Seleziona almeno un dipendente.');return;}
+  const btn=document.querySelector('.btn-pdf');
+  btn.innerHTML='<span class="spinner"></span>PDF…';btn.disabled=true;
+  try{await savePDF(selected[activeIdx].dip,selected[activeIdx].photo);}
+  finally{btn.innerHTML='📄 PDF';btn.disabled=false;updateCard();}
+}
+
+async function generateAllPDFs(){
+  if(!selected.length){alert('Seleziona almeno un dipendente.');return;}
+  const btn=document.getElementById('btnPdfAll');btn.disabled=true;
+  for(let i=0;i<selected.length;i++){
+    btn.innerHTML=`<span class="spinner"></span>PDF ${i+1}/${selected.length}…`;
+    await savePDF(selected[i].dip,selected[i].photo);
+    await new Promise(r=>setTimeout(r,300));
+  }
+  btn.innerHTML='📄 Salva PDF Selezionati';btn.disabled=false;updateCard();
+}
+
+async function downloadPNG(){
+  if(!selected.length){alert('Seleziona almeno un dipendente.');return;}
+  const canvas=await html2canvas(document.getElementById('theCard'),{scale:4,useCORS:true,backgroundColor:'#ffffff'});
+  const link=document.createElement('a');
+  link.download=pdfFilename(selected[activeIdx].dip)+'.png';
+  link.href=canvas.toDataURL('image/png');link.click();
+}
+
+updateCard();
+</script>
+</body>
+</html>
